@@ -91,8 +91,8 @@ i32 fsRead(i32 fd, i32 numb, void* buf) {
   i32 inum = bfsFdToInum(fd);
   // fetch cursor
   i32 cursor = bfsTell(fd);
-  i32 fbn = cursor / BYTESPERBLOCK;
   i32 cursorIdx = cursor % BYTESPERBLOCK;
+  i32 fbn = cursor / BYTESPERBLOCK;
 
   while (numb > 0) {
     // fetch block
@@ -122,7 +122,7 @@ i32 fsRead(i32 fd, i32 numb, void* buf) {
     // check for EoF
     if (fbn * BYTESPERBLOCK > fsSize(fd)) {
       // hit EoF, return total num bytes read
-      return totalBytes - numb;
+      return EBADREAD;
     }
 
     // read next block
@@ -200,8 +200,65 @@ i32 fsSize(i32 fd) {
 // ============================================================================
 i32 fsWrite(i32 fd, i32 numb, void* buf) {
 
+  // store incase of error
+  i8 tempBuf[numb];
+  memcpy(tempBuf, buf, numb);
+  u32 bufIdx = 0;
+  i32 totalBytes = numb;
 
+  i32 inum = bfsFdToInum(fd);
+  // fetch cursor
+  i32 cursor = bfsTell(fd);
+  i32 cursorIdx = cursor % BYTESPERBLOCK;
+  i32 fbn = cursor / BYTESPERBLOCK;
 
+  // fetch dbn
+  i32 dbn = bfsFbnToDbn(inum, fbn);
+  if (dbn == ENODBN) {
+    // alloc if not mapped
+    bfsAllocBlock(inum, fbn);
+    dbn = bfsFbnToDbn(inum, fbn);
+  } 
+
+  while (numb > 0) {
+    // fetch block
+    i8 writeBuf[BYTESPERBLOCK];
+    bfsRead(inum, fbn, writeBuf);
+    i32 writeCount = 0;
+
+    // case cursor != beginning of block
+    if (cursorIdx > 0) {
+      // read at most numb bytes or end of block
+      i32 bufCount = BYTESPERBLOCK - cursorIdx;
+      writeCount = (numb > bufCount) ? bufCount : numb;
+    }
+    // case cursor == beginning of block
+    else {
+      // read up to a full block
+      writeCount = MIN(BYTESPERBLOCK, numb);
+    }
+
+    // write to buffer
+    memcpy(&writeBuf[cursorIdx], &tempBuf[bufIdx], writeCount);
+    // move cursor
+    cursorIdx = 0;
+    bufIdx += writeCount;
+    numb -= writeCount;
+
+    // write to file
+    bioWrite(dbn, writeBuf);
+    fsSeek(fd, writeCount, SEEK_CUR);
+
+    // next block
+    dbn = bfsFbnToDbn(inum, ++fbn);
+
+    // check for EoF
+    if (numb > 0 && fbn * BYTESPERBLOCK > fsSize(fd)) {
+      // hit EoF, expand file
+      bfsAllocBlock(inum, fbn);
+    }
+
+  }
 
   return 0;
 }
