@@ -63,7 +63,7 @@ typedef struct {          // Open File Table Entry
   i32 curs;               // cursor into file
 } OFTE;
 
-OFTE g_oft[NUMOFTENTRIES];
+extern OFTE g_oft[NUMOFTENTRIES];
 
 i32 bfsAllocBlock(i32 inum, i32 fbn);
 i32 bfsCreateFile(str fname);

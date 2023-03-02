@@ -3,6 +3,9 @@
 // ============================================================================
 
 #include "bfs.h"
+// using extern
+OFTE g_oft[NUMOFTENTRIES];
+
 
 // ============================================================================
 // Allocate a free disk block for the file whose Inode number is 'inum' and
