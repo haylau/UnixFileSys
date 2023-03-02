@@ -84,53 +84,54 @@ i32 fsOpen(str fname) {
 i32 fsRead(i32 fd, i32 numb, void* buf) {
 
   // store incase of error
-  void* tempBuf = calloc(BYTESPERBLOCK, sizeof(i8));
-  i8 bufIdx = 0;
-  i32 totalBytes = numb; 
+  i8 tempBuf[numb];
+  u32 bufIdx = 0;
+  i32 totalBytes = numb;
 
-  i32 inum = bfsInumToFd(fd);
+  i32 inum = bfsFdToInum(fd);
   // fetch cursor
   i32 cursor = bfsTell(fd);
   i32 fbn = cursor / BYTESPERBLOCK;
-  i32 blockRemainder = cursor % BYTESPERBLOCK; 
+  i32 cursorIdx = cursor % BYTESPERBLOCK;
 
-  while(numb > 0) {
-    // fetch block into tempBuf
-    bfsRead(inum, fbn, tempBuf);
+  while (numb > 0) {
+    // fetch block
+    i8 readBuf[BYTESPERBLOCK];
+    bfsRead(inum, fbn, readBuf);
     i32 readCount = 0;
 
     // case cursor != beginning of block
-    if(blockRemainder > 0) {
+    if (cursorIdx > 0) {
       // read at most numb bytes or end of block
-      i32 bufCount = BYTESPERBLOCK - blockRemainder;
+      i32 bufCount = BYTESPERBLOCK - cursorIdx;
       readCount = (numb > bufCount) ? bufCount : numb;
-      blockRemainder = 0;
+      cursorIdx = 0;
     }
     // case cursor == beginning of block
     else {
       // read up to a full block
-      readCount = MAX(BYTESPERBLOCK, numb);
+      readCount = MIN(BYTESPERBLOCK, numb);
     }
 
     // move to output
-    memcpy(&buf[bufIdx], &tempBuf[blockRemainder], readCount);
+    memcpy(&tempBuf[bufIdx], &readBuf[cursorIdx], readCount);
     bufIdx += readCount;
     // move cursor
     numb -= readCount;
-    fsSeek(fd, readCount, SEEK_CUR);
-
-    // read next block
-    ++fbn; 
 
     // check for EoF
-    if(fbn * BYTESPERBLOCK > fsSize(fd)) {
+    if (fbn * BYTESPERBLOCK > fsSize(fd)) {
       // hit EoF, return total num bytes read
-      free(tempBuf);
       return totalBytes - numb;
     }
+
+    // read next block
+    ++fbn;
   }
-  free(tempBuf);
-  return 0;
+  // move to return buffer
+  memcpy(buf, tempBuf, totalBytes);
+  fsSeek(fd, totalBytes, SEEK_CUR);
+  return totalBytes;
 }
 
 
@@ -199,10 +200,8 @@ i32 fsSize(i32 fd) {
 // ============================================================================
 i32 fsWrite(i32 fd, i32 numb, void* buf) {
 
-  // ++++++++++++++++++++++++
-  // Insert your code here
-  // ++++++++++++++++++++++++
 
-  FATAL(ENYI);                                  // Not Yet Implemented!
+
+
   return 0;
 }
