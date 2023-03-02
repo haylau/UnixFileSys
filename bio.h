@@ -8,6 +8,7 @@
 
 #include <stdio.h>
 
+#include "bfs.h"
 #include "alias.h"
 
 i32 bioRead (i32 dbn, void* buf);

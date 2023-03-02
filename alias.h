@@ -8,6 +8,9 @@
 
 #include <stdint.h>
 
+#define MIN(i, j) (((i) < (j)) ? (i) : (j))
+#define MAX(i, j) (((i) > (j)) ? (i) : (j))
+
 typedef uint8_t  u8;
 typedef uint16_t u16;
 typedef uint32_t u32;

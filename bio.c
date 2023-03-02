@@ -2,7 +2,6 @@
 // bio.c - low level Block IO functions
 // ============================================================================
 
-#include "bfs.h"
 #include "bio.h"
 
 // ============================================================================
@@ -17,7 +16,7 @@ i32 bioRead(i32 dbn, void* buf) {
   if (fp == NULL) FATAL(ENODISK);
 
   i32 boff = dbn * BYTESPERBLOCK;
-  i32 ret  = fseek(fp, boff, SEEK_SET);
+  i32 ret = fseek(fp, boff, SEEK_SET);
   if (ret != 0) { fclose(fp); FATAL(ret); }
 
   i32 numb = fread(buf, 1, BYTESPERBLOCK, fp);
@@ -37,7 +36,7 @@ i32 bioWrite(i32 dbn, void* buf) {
   if (fp == NULL) FATAL(ENODISK);
 
   i32 boff = dbn * BYTESPERBLOCK;
-  i32 ret  = fseek(fp, boff, SEEK_SET);
+  i32 ret = fseek(fp, boff, SEEK_SET);
   if (ret != 0) { fclose(fp); FATAL(ret); }
 
   i32 numb = fwrite(buf, 1, BYTESPERBLOCK, fp);

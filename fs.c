@@ -2,16 +2,15 @@
 // fs.c - user FileSytem API
 // ============================================================================
 
-#include "bfs.h"
 #include "fs.h"
 
 // ============================================================================
 // Close the file currently open on file descriptor 'fd'.
 // ============================================================================
-i32 fsClose(i32 fd) { 
+i32 fsClose(i32 fd) {
   i32 inum = bfsFdToInum(fd);
   bfsDerefOFT(inum);
-  return 0; 
+  return 0;
 }
 
 
@@ -84,11 +83,53 @@ i32 fsOpen(str fname) {
 // ============================================================================
 i32 fsRead(i32 fd, i32 numb, void* buf) {
 
-  // ++++++++++++++++++++++++
-  // Insert your code here
-  // ++++++++++++++++++++++++
+  // store incase of error
+  void* tempBuf = calloc(BYTESPERBLOCK, sizeof(i8));
+  i8 bufIdx = 0;
+  i32 totalBytes = numb; 
 
-  FATAL(ENYI);                                  // Not Yet Implemented!
+  i32 inum = bfsInumToFd(fd);
+  // fetch cursor
+  i32 cursor = bfsTell(fd);
+  i32 fbn = cursor / BYTESPERBLOCK;
+  i32 blockRemainder = cursor % BYTESPERBLOCK; 
+
+  while(numb > 0) {
+    // fetch block into tempBuf
+    bfsRead(inum, fbn, tempBuf);
+    i32 readCount = 0;
+
+    // case cursor != beginning of block
+    if(blockRemainder > 0) {
+      // read at most numb bytes or end of block
+      i32 bufCount = BYTESPERBLOCK - blockRemainder;
+      readCount = (numb > bufCount) ? bufCount : numb;
+      blockRemainder = 0;
+    }
+    // case cursor == beginning of block
+    else {
+      // read up to a full block
+      readCount = MAX(BYTESPERBLOCK, numb);
+    }
+
+    // move to output
+    memcpy(&buf[bufIdx], &tempBuf[blockRemainder], readCount);
+    bufIdx += readCount;
+    // move cursor
+    numb -= readCount;
+    fsSeek(fd, readCount, SEEK_CUR);
+
+    // read next block
+    ++fbn; 
+
+    // check for EoF
+    if(fbn * BYTESPERBLOCK > fsSize(fd)) {
+      // hit EoF, return total num bytes read
+      free(tempBuf);
+      return totalBytes - numb;
+    }
+  }
+  free(tempBuf);
   return 0;
 }
 
@@ -106,24 +147,24 @@ i32 fsRead(i32 fd, i32 numb, void* buf) {
 i32 fsSeek(i32 fd, i32 offset, i32 whence) {
 
   if (offset < 0) FATAL(EBADCURS);
- 
+
   i32 inum = bfsFdToInum(fd);
   i32 ofte = bfsFindOFTE(inum);
-  
-  switch(whence) {
-    case SEEK_SET:
-      g_oft[ofte].curs = offset;
-      break;
-    case SEEK_CUR:
-      g_oft[ofte].curs += offset;
-      break;
-    case SEEK_END: {
-        i32 end = fsSize(fd);
-        g_oft[ofte].curs = end + offset;
-        break;
-      }
-    default:
-        FATAL(EBADWHENCE);
+
+  switch (whence) {
+  case SEEK_SET:
+    g_oft[ofte].curs = offset;
+    break;
+  case SEEK_CUR:
+    g_oft[ofte].curs += offset;
+    break;
+  case SEEK_END: {
+    i32 end = fsSize(fd);
+    g_oft[ofte].curs = end + offset;
+    break;
+  }
+  default:
+    FATAL(EBADWHENCE);
   }
   return 0;
 }

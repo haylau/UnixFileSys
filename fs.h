@@ -6,6 +6,8 @@
 // ===================================================================
 
 #include <stdio.h>
+
+#include "bfs.h"
 #include "alias.h"
 #include "errors.h"
 

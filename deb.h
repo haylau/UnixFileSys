@@ -7,6 +7,8 @@
 
 #include <ctype.h>
 #include <stdio.h>
+
+#include "bfs.h"
 #include "alias.h"
 
 i32 debDumpDbn   (i32 dbn, i32 size);

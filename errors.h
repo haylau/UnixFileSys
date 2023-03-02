@@ -1,6 +1,9 @@
 #ifndef ERRORS_H
 #define ERRORS_H
 
+#include <stdio.h>
+#include <stdlib.h>
+
 #include "alias.h"
 
 #define FATAL(err) { printf("\nERROR: File %s, Line %d \n", __FILE__, __LINE__); \
