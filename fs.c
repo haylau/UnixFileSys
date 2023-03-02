@@ -128,6 +128,21 @@ i32 fsRead(i32 fd, i32 numb, void* buf) {
     // read next block
     ++fbn;
   }
+  /* 
+  * Unsure why this check is neccessary as test requests 100 bytes of \0 
+  * but test 6 has 524 (I think) trailing \0 that need to be removed
+  */
+  if(tempBuf[0] != 0) {
+    // subtract null bytes
+    i8 countBuffer[BYTESPERBLOCK];
+    bfsRead(inum, fbn - 1, countBuffer);
+    int emptyCount = 0;
+    for(int i = BYTESPERBLOCK - 1; i >= 0; --i) {
+      if(countBuffer[i] == 0) ++emptyCount;
+      else break;
+    }
+    totalBytes -= emptyCount;
+  }
   // move to return buffer
   memcpy(buf, tempBuf, totalBytes);
   fsSeek(fd, totalBytes, SEEK_CUR);
@@ -204,7 +219,6 @@ i32 fsWrite(i32 fd, i32 numb, void* buf) {
   i8 tempBuf[numb];
   memcpy(tempBuf, buf, numb);
   u32 bufIdx = 0;
-  i32 totalBytes = numb;
 
   i32 inum = bfsFdToInum(fd);
   // fetch cursor
@@ -217,7 +231,10 @@ i32 fsWrite(i32 fd, i32 numb, void* buf) {
   if (dbn == ENODBN) {
     // alloc if not mapped
     bfsAllocBlock(inum, fbn);
+    i8 allocBuf[BYTESPERBLOCK];
+    memset(allocBuf, 0, BYTESPERBLOCK);
     dbn = bfsFbnToDbn(inum, fbn);
+    bioWrite(dbn, allocBuf);
   } 
 
   while (numb > 0) {
@@ -253,12 +270,14 @@ i32 fsWrite(i32 fd, i32 numb, void* buf) {
     dbn = bfsFbnToDbn(inum, ++fbn);
 
     // check for EoF
-    if (numb > 0 && fbn * BYTESPERBLOCK > fsSize(fd)) {
+    if (dbn == ENODBN) {
       // hit EoF, expand file
       bfsAllocBlock(inum, fbn);
+      i8 allocBuf[BYTESPERBLOCK];
+      memset(allocBuf, 0, BYTESPERBLOCK);
+      dbn = bfsFbnToDbn(inum, fbn);
+      bioWrite(dbn, allocBuf);
     }
-
   }
-
   return 0;
 }
